@@ -1,0 +1,47 @@
+{
+    "name": "react-simple",
+    "version": "1.0.0",
+    "description": "a simple react",
+    "main": "index.js",
+    "author": "Bruce yff",
+    "license": "MIT",
+    "scripts": {
+        "start": "parcel index.html",
+        "test": "test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/lessYFF/react-simple.git"
+    },
+    "keywords": [
+        "react"
+    ],
+    "bugs": {
+        "url": "https://github.com/lessYFF/react-simple/issues"
+    },
+    "homepage": "https://github.com/lessYFF/react-simple#readme",
+    "devDependencies": {
+        "@babel/core": "^7.2.2",
+        "babel-plugin-transform-react-jsx": "^6.24.1",
+        "babel-preset-env": "^1.7.0",
+        "git-lints": "^1.0.8",
+        "parcel-bundler": "^1.11.0"
+    },
+    "lint-staged": {
+        "*.{js,json,ts,css,md,vue,react}": [
+            "prettier --write",
+            "git add"
+        ]
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged",
+            "commit-msg": "commitlint -e $GIT_PARAMS"
+        }
+    },
+    "config": {
+        "commitizen": {
+            "path": "./node_modules/cz-conventional-changelog"
+        }
+    }
+}
