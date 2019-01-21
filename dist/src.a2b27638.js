@@ -109,8 +109,15 @@ parcelRequire = (function(modules, cache, entry, globalName) {
     return newRequire
 })(
     {
-        'src/index.js': [
+        'src/react-dom/dom.js': [
             function(require, module, exports) {
+                'use strict'
+
+                Object.defineProperty(exports, '__esModule', {
+                    value: true,
+                })
+                exports.default = void 0
+
                 function _typeof(obj) {
                     if (typeof Symbol === 'function' && typeof Symbol.iterator === 'symbol') {
                         _typeof = function _typeof(obj) {
@@ -129,12 +136,12 @@ parcelRequire = (function(modules, cache, entry, globalName) {
                     return _typeof(obj)
                 }
 
-                var setAttribute = function setAttribute(dom, name) {
+                function setAttribute(dom, name) {
                     var value = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : ''
                     if (name === 'className') name = 'class'
 
                     if (/on\w+/.test(name)) {
-                        name = name.lowerCase()
+                        name = name.toLowerCase()
                         dom[name] = value
                     } else if (name === 'style') {
                         if (!vaule || typeof value === 'string') {
@@ -158,60 +165,417 @@ parcelRequire = (function(modules, cache, entry, globalName) {
                     }
                 }
 
-                var React = {
-                    createElement: function createElement(tag, attrs) {
-                        for (
-                            var _len = arguments.length, children = new Array(_len > 2 ? _len - 2 : 0), _key = 2;
-                            _key < _len;
-                            _key++
-                        ) {
-                            children[_key - 2] = arguments[_key]
-                        }
-
-                        return {
-                            tag: tag,
-                            attrs: attrs,
-                            children: children,
-                        }
-                    },
-                }
-                var ReactDOM = {
-                    render: function render(vnode, container) {
-                        var _this = this
-
-                        container.innerHTML = ''
-
-                        if (typeof vnode === 'string') {
-                            var textNode = document.createTextNode(vnode)
-                            return container.appendChild(textNode)
-                        }
-
-                        var DOM = document.createElement(vnode.tag)
-
-                        if (DOM.attrs) {
-                            Object.keys(vnode.attrs).forEach(function(key) {
-                                var value = attrs(key)
-                                setAttribute(DOM, key, value)
-                            })
-                        }
-
-                        vnode.children.forEach(function(child) {
-                            _this.render(child, DOM)
-                        })
-                        return container.appendChild(DOM)
-                    },
-                }
-                setInterval(function() {
-                    var element = React.createElement(
-                        'div',
-                        null,
-                        React.createElement('h1', null, ' Hello, world!'),
-                        React.createElement('h2', null, 'It is ', new Date().toLocaleTimeString())
-                    )
-                    ReactDOM.render(element, document.querySelector('#app'))
-                }, 1000)
+                var _default = setAttribute
+                exports.default = _default
             },
             {},
+        ],
+        'src/react-dom/render.js': [
+            function(require, module, exports) {
+                'use strict'
+
+                Object.defineProperty(exports, '__esModule', {
+                    value: true,
+                })
+                exports.render = render
+                exports.renderComponent = renderComponent
+
+                var _dom = _interopRequireDefault(require('./dom'))
+
+                var _component = _interopRequireDefault(require('../react/component'))
+
+                function _interopRequireDefault(obj) {
+                    return obj && obj.__esModule ? obj : { default: obj }
+                }
+
+                // 创建组件
+                function createComponent(component, props) {
+                    var newComponent
+
+                    if ('render' in component.prototype) {
+                        newComponent = new component(props)
+                    } else {
+                        newComponent = new _component.default(props)
+                        newComponent.constructor = component
+
+                        newComponent.render = function() {
+                            return this.constructor(props)
+                        }
+                    }
+
+                    return newComponent
+                } // 更新组件
+
+                function renderComponent(component) {
+                    var renderor = component.render()
+
+                    if (component.base && component.componentWillUpdate) {
+                        component.componentWillUpdate()
+                    }
+
+                    var base = _render(renderor)
+
+                    if (component.base && component.componentDidUpdate) {
+                        component.componentDidUpdate()
+                    } else if (component.componentDidMount) {
+                        component.componentDidMount()
+                    }
+
+                    if (component.base && component.base.parentNode) {
+                        component.base.parentNode.replaceChild(base, component.base)
+                    }
+
+                    component.base = base
+                } // 设置组件属性
+
+                function setComponentProps(component, props) {
+                    if (!component.base && component.componentWillMount) {
+                        component.componentWillMount()
+                    } else if (component.componentWillReceiveProps) {
+                        component.componentWillReceiveProps(props)
+                    }
+
+                    component.props = props
+                    renderComponent(component)
+                }
+
+                function _render(vnode) {
+                    if (!vnode) vnode = ''
+
+                    if (typeof vnode === 'string' || typeof vnode === 'number') {
+                        var textNode = document.createTextNode(vnode)
+                        return textNode
+                    }
+
+                    if (typeof vnode.tag === 'function') {
+                        var component = createComponent(vnode.tag, vnode.attrs)
+                        setComponentProps(component, vnode.attrs)
+                        return component.base
+                    }
+
+                    var DOM = document.createElement(vnode.tag)
+
+                    if (vnode.attrs) {
+                        Object.keys(vnode.attrs).forEach(function(key) {
+                            var value = vnode.attrs[key]
+                            ;(0, _dom.default)(DOM, key, value)
+                        })
+                    }
+
+                    if (Array.isArray(vnode.children)) {
+                        vnode.children.forEach(function(child) {
+                            render(child, DOM)
+                        })
+                    }
+
+                    return DOM
+                }
+
+                function render(vnode, container) {
+                    return container.appendChild(_render(vnode))
+                }
+            },
+            { './dom': 'src/react-dom/dom.js', '../react/component': 'src/react/component.js' },
+        ],
+        'src/react/component.js': [
+            function(require, module, exports) {
+                'use strict'
+
+                Object.defineProperty(exports, '__esModule', {
+                    value: true,
+                })
+                exports.default = void 0
+
+                var _render = require('../react-dom/render')
+
+                function _classCallCheck(instance, Constructor) {
+                    if (!(instance instanceof Constructor)) {
+                        throw new TypeError('Cannot call a class as a function')
+                    }
+                }
+
+                function _defineProperties(target, props) {
+                    for (var i = 0; i < props.length; i++) {
+                        var descriptor = props[i]
+                        descriptor.enumerable = descriptor.enumerable || false
+                        descriptor.configurable = true
+                        if ('value' in descriptor) descriptor.writable = true
+                        Object.defineProperty(target, descriptor.key, descriptor)
+                    }
+                }
+
+                function _createClass(Constructor, protoProps, staticProps) {
+                    if (protoProps) _defineProperties(Constructor.prototype, protoProps)
+                    if (staticProps) _defineProperties(Constructor, staticProps)
+                    return Constructor
+                }
+
+                var Component =
+                    /*#__PURE__*/
+                    (function() {
+                        function Component() {
+                            var props = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {}
+
+                            _classCallCheck(this, Component)
+
+                            this.state = {}
+                            this.props = props
+                        }
+
+                        _createClass(Component, [
+                            {
+                                key: 'setState',
+                                value: function setState(stateChange) {
+                                    Object.assign(this.state, stateChange)
+                                    ;(0, _render.renderComponent)(this)
+                                },
+                            },
+                        ])
+
+                        return Component
+                    })()
+
+                var _default = Component
+                exports.default = _default
+            },
+            { '../react-dom/render': 'src/react-dom/render.js' },
+        ],
+        'src/react/create-element.js': [
+            function(require, module, exports) {
+                'use strict'
+
+                Object.defineProperty(exports, '__esModule', {
+                    value: true,
+                })
+                exports.default = void 0
+
+                var createElement = function createElement(tag, attrs) {
+                    for (
+                        var _len = arguments.length, children = new Array(_len > 2 ? _len - 2 : 0), _key = 2;
+                        _key < _len;
+                        _key++
+                    ) {
+                        children[_key - 2] = arguments[_key]
+                    }
+
+                    return {
+                        tag: tag,
+                        attrs: attrs,
+                        children: children,
+                    }
+                }
+
+                var _default = createElement
+                exports.default = _default
+            },
+            {},
+        ],
+        'src/react/index.js': [
+            function(require, module, exports) {
+                'use strict'
+
+                Object.defineProperty(exports, '__esModule', {
+                    value: true,
+                })
+                exports.default = void 0
+
+                var _component = _interopRequireDefault(require('./component'))
+
+                var _createElement = _interopRequireDefault(require('./create-element'))
+
+                function _interopRequireDefault(obj) {
+                    return obj && obj.__esModule ? obj : { default: obj }
+                }
+
+                var _default = {
+                    Component: _component.default,
+                    createElement: _createElement.default,
+                }
+                exports.default = _default
+            },
+            { './component': 'src/react/component.js', './create-element': 'src/react/create-element.js' },
+        ],
+        'src/react-dom/index.js': [
+            function(require, module, exports) {
+                'use strict'
+
+                Object.defineProperty(exports, '__esModule', {
+                    value: true,
+                })
+                exports.default = void 0
+
+                var _render = require('./render')
+
+                var _default = {
+                    render: _render.render,
+                    renderComponent: _render.renderComponent,
+                }
+                exports.default = _default
+            },
+            { './render': 'src/react-dom/render.js' },
+        ],
+        'src/index.js': [
+            function(require, module, exports) {
+                'use strict'
+
+                var _react = _interopRequireDefault(require('./react'))
+
+                var _reactDom = _interopRequireDefault(require('./react-dom'))
+
+                function _interopRequireDefault(obj) {
+                    return obj && obj.__esModule ? obj : { default: obj }
+                }
+
+                function _typeof(obj) {
+                    if (typeof Symbol === 'function' && typeof Symbol.iterator === 'symbol') {
+                        _typeof = function _typeof(obj) {
+                            return typeof obj
+                        }
+                    } else {
+                        _typeof = function _typeof(obj) {
+                            return obj &&
+                                typeof Symbol === 'function' &&
+                                obj.constructor === Symbol &&
+                                obj !== Symbol.prototype
+                                ? 'symbol'
+                                : typeof obj
+                        }
+                    }
+                    return _typeof(obj)
+                }
+
+                function _classCallCheck(instance, Constructor) {
+                    if (!(instance instanceof Constructor)) {
+                        throw new TypeError('Cannot call a class as a function')
+                    }
+                }
+
+                function _defineProperties(target, props) {
+                    for (var i = 0; i < props.length; i++) {
+                        var descriptor = props[i]
+                        descriptor.enumerable = descriptor.enumerable || false
+                        descriptor.configurable = true
+                        if ('value' in descriptor) descriptor.writable = true
+                        Object.defineProperty(target, descriptor.key, descriptor)
+                    }
+                }
+
+                function _createClass(Constructor, protoProps, staticProps) {
+                    if (protoProps) _defineProperties(Constructor.prototype, protoProps)
+                    if (staticProps) _defineProperties(Constructor, staticProps)
+                    return Constructor
+                }
+
+                function _possibleConstructorReturn(self, call) {
+                    if (call && (_typeof(call) === 'object' || typeof call === 'function')) {
+                        return call
+                    }
+                    return _assertThisInitialized(self)
+                }
+
+                function _assertThisInitialized(self) {
+                    if (self === void 0) {
+                        throw new ReferenceError("this hasn't been initialised - super() hasn't been called")
+                    }
+                    return self
+                }
+
+                function _getPrototypeOf(o) {
+                    _getPrototypeOf = Object.setPrototypeOf
+                        ? Object.getPrototypeOf
+                        : function _getPrototypeOf(o) {
+                              return o.__proto__ || Object.getPrototypeOf(o)
+                          }
+                    return _getPrototypeOf(o)
+                }
+
+                function _inherits(subClass, superClass) {
+                    if (typeof superClass !== 'function' && superClass !== null) {
+                        throw new TypeError('Super expression must either be null or a function')
+                    }
+                    subClass.prototype = Object.create(superClass && superClass.prototype, {
+                        constructor: { value: subClass, writable: true, configurable: true },
+                    })
+                    if (superClass) _setPrototypeOf(subClass, superClass)
+                }
+
+                function _setPrototypeOf(o, p) {
+                    _setPrototypeOf =
+                        Object.setPrototypeOf ||
+                        function _setPrototypeOf(o, p) {
+                            o.__proto__ = p
+                            return o
+                        }
+                    return _setPrototypeOf(o, p)
+                }
+
+                var Counter =
+                    /*#__PURE__*/
+                    (function(_React$Component) {
+                        _inherits(Counter, _React$Component)
+
+                        function Counter(props) {
+                            var _this
+
+                            _classCallCheck(this, Counter)
+
+                            _this = _possibleConstructorReturn(this, _getPrototypeOf(Counter).call(this, props))
+                            _this.state = {
+                                num: 1,
+                            }
+                            return _this
+                        }
+
+                        _createClass(Counter, [
+                            {
+                                key: 'componentWillUpdate',
+                                value: function componentWillUpdate() {
+                                    console.log('update execute')
+                                },
+                            },
+                            {
+                                key: 'componentWillMount',
+                                value: function componentWillMount() {
+                                    console.log('mount execute')
+                                },
+                            },
+                            {
+                                key: 'onClick',
+                                value: function onClick() {
+                                    this.setState({
+                                        num: this.state.num + 1,
+                                    })
+                                },
+                            },
+                            {
+                                key: 'render',
+                                value: function render() {
+                                    var _this2 = this
+
+                                    return _react.default.createElement(
+                                        'div',
+                                        null,
+                                        _react.default.createElement('h1', null, ' count: ', this.state.num, ' '),
+                                        _react.default.createElement(
+                                            'button',
+                                            {
+                                                onClick: function onClick() {
+                                                    return _this2.onClick()
+                                                },
+                                            },
+                                            ' add '
+                                        )
+                                    )
+                                },
+                            },
+                        ])
+
+                        return Counter
+                    })(_react.default.Component)
+
+                _reactDom.default.render(_react.default.createElement(Counter, null), document.querySelector('#app'))
+            },
+            { './react': 'src/react/index.js', './react-dom': 'src/react-dom/index.js' },
         ],
         'node_modules/parcel-bundler/src/builtins/hmr-runtime.js': [
             function(require, module, exports) {
@@ -241,7 +605,7 @@ parcelRequire = (function(modules, cache, entry, globalName) {
                 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
                     var hostname = '' || location.hostname
                     var protocol = location.protocol === 'https:' ? 'wss' : 'ws'
-                    var ws = new WebSocket(protocol + '://' + hostname + ':' + '55326' + '/')
+                    var ws = new WebSocket(protocol + '://' + hostname + ':' + '56313' + '/')
 
                     ws.onmessage = function(event) {
                         var data = JSON.parse(event.data)
